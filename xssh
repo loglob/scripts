@@ -3,7 +3,7 @@
 
 # The port under which the local pulseaudio instance is listening
 PULSE_PORT=4713
-HOST_CONF="~/.config/xssh-host"
+HOST_CONF=~/.config/xssh-host
 
 if [ -n "$1" ]
 then
