@@ -10,6 +10,7 @@ then
 	HOST="$1"
 	echo "$1" > "$HOST_CONF"
 elif [ -f "$HOST_CONF" ]
+then
 	HOST="$(cat "$HOST_CONF")"
 else
 	echo "xssh: Hostname required"
