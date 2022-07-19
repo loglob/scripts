@@ -1,0 +1,54 @@
+#!/usr/bin/bash
+# vm-exec: Executes a predefined program on a virtualbox windows VM with a read-write file argument
+
+VM_NAME="VM NAME HERE"
+PROGRAM_NAME="FULL (!) PATH TO PROGRAM HERE"
+DMZ_VM_SIDE="SHARED FOLDER VM MOUNTPOINT HERE"
+USER="VM WINDOWS USERNAME HERE"
+DMZ_HOST_SIDE="SHARED FOLDER HOST MOUNTPOINT HERE"
+
+if [ $# != 1 ]
+then
+	echo "Usage: $0 [a file]"
+	echo "Executes $PROGRAM_NAME on the $VM_NAME VM with the file as argument and copies back changes"
+	exit
+fi
+
+FILE="$1"
+FILENAME=$(basename "$FILE")
+
+if [ ! -f "$FILE" ]
+then
+	echo "Can't open $FILE: Not a regular file"
+	exit
+fi
+
+HOST_PATH="$DMZ_HOST_SIDE/$FILENAME"
+
+if [ -e "$HOST_PATH" ]
+then
+	HOST_PATH=$(mktemp "$DMZ_HOST_SIDE/XXXXX-$FILENAME")
+	FILENAME=$(basename "$HOST_PATH")
+fi
+
+cp "$FILE" "$HOST_PATH"
+
+function watch()
+{
+	inotifywait -e modify,moved_to -m "$DMZ_HOST_SIDE" | egrep --line-buffered "$FILENAME$" | while read i
+	do
+		cp "$HOST_PATH" "$FILE"
+	done
+}
+
+VBoxManage startvm "$VM_NAME"
+
+watch &
+WATCHER="$!"
+
+VBoxManage --nologo guestcontrol "$VM_NAME" run --username "$USER" --wait-stdout -- "$PROGRAM_NAME" "$DMZ_VM_SIDE\\$FILENAME"
+
+VBoxManage controlvm "$VM_NAME" savestate &
+
+kill "$WATCHER"
+mv "$HOST_PATH" "$FILE"
