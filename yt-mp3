@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# yt-mp3: Shorthand for downloading music using yt-dlp
+yt-dlp --extract-audio --audio-format=mp3 --sponsorblock-remove=music_offtopic -o "%(title)s.%(ext)s" "$@"
