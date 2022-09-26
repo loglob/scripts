@@ -1,0 +1,4 @@
+#!/bin/sh
+# find-dupes: finds every duplicate file in the current directory, including all subdirectories.
+#  outputs only one example of each duplicate class
+find . -type f | xargs -d'\n' md5sum | sort | sort --field-separator=' ' --key=1 | uniq -d -w33 | cut -d' ' -f3-
