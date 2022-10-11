@@ -1,0 +1,37 @@
+#!/usr/bin/bash
+# ips-whois: Reads a list of IPs and identifies subnets via whois data.
+#  Also includes abuse/email records to identify providers
+#  outputs format:  [IP]-[IP] [provider hostnames...]
+#   IP ranges are sorted and not overlapping
+
+# The end of the last yielded IP range.
+last_ip=( 0 0 0 0 )
+
+sort -n -u -t . -k 1,1 -k 2,2 -k 3,3 -k 4,4 | while read -r ip
+do
+	ipv=( ${ip//./ } )
+
+	# skip whois query via input sortedness
+	if [ ${ipv[0]} -lt ${last_ip[0]} ] || ( [ ${ipv[0]} -eq ${last_ip[0]} ] && (\
+		[ ${ipv[1]} -lt ${last_ip[1]} ] || ( [ ${ipv[1]} -eq ${last_ip[1]} ] && (\
+			[ ${ipv[2]} -lt ${last_ip[2]} ] || ( [ ${ipv[2]} -eq ${last_ip[2]} ] && [ ${ipv[3]} -le ${last_ip[3]} ] )\
+	  ) ) ) )
+	then
+		continue;
+	fi
+
+	WHOIS=`whois -H $ip`
+
+	# some entries (pretty much only google's) also have a CIDR: field which may have additional info
+	RANGE=`grep -m 1 -i -E "^(NetRange|inetnum):" <<< "$WHOIS" | tr -d ' ' | cut -d: -f2-`
+	PROVIDER=`grep -i -E --only-matching "[a-z0-9.-]+@[a-z0-9.-]+[a-z]" <<< "$WHOIS" | cut -d@ -f2 | sort -u | tr -s [:space:] ' '`
+
+	if [ -z $RANGE ]
+	then
+		echo "Failed extracting IP range for $ip" 1>&2
+		continue
+	fi
+
+	echo $RANGE $PROVIDER
+	last_ip=( $(cut -d- -f2 <<< $RANGE | tr . ' ') )
+done

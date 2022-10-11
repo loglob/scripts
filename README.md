@@ -51,3 +51,22 @@ Simply run `xssh host` to connect to the host as with ssh.
 
 Alternatively, use `xssh` to connect to the last used host.
 (This information is stored in `~/.config/xssh-host` and updated on running the regular command)
+
+## fail2ban-ips, ips-whois, whois-ipset
+Scripts to build an ipset from fail2ban logs or other IPs.
+Example combined usage:
+```sh
+	sudo ./fail2ban-ips | ./ips-whois > whois-data
+	sudo whois-ipset whois-data IPSetHere black,listed,domains white,listed,domains
+```
+
+### fail2ban-ips
+Exports every offender IP detected by fail2ban
+
+### ips-whois
+Uses whois records to find the subnets in a list of IPs.
+Then use abuse/email records to identify the providers of those subnets.
+
+### whois-ipset
+Use the whois information from `ips-whois` to interactively build an IPset containing offending subnets.
+Uses the identified providers for filtering the sets.

@@ -1,0 +1,122 @@
+#!/usr/bin/bash
+# fail2ban-ipset: Builds an IP set from annotated IP ranges.
+#  If a record is not filtered, asks the user for input, unless a redirection is active.
+#    If used with redirected output, outputs any unfiltered IP ranges to stdout
+#  input format: [IP]-[IP] [annotations...]
+
+FILE="$1"
+SET="$2"
+BLACKLIST="$3"
+WHITELIST="$4"
+
+if test "$SET" == "--dry"
+then
+	SET=""
+elif test -z "$SET"
+then
+	echo -e "Usage: fail2ban-ipset [input file] [ipset|--dry] [<blacklist>] [<whitelist>]\n"\
+			"	If --dry is given, echoes incomplete ipset commands to stderr\n"\
+			"	When piped, unfiltered IP ranges are forwarded to stdout directly, in the format of ips-whois\n"\
+			"	Black/Whitelist is a list of hostnames separated by regular spaces that are matched exactly" 1>&2
+	exit 0
+elif ! (ipset list -terse | grep -q -x "Name: $SET")
+then
+	echo "The given set doesn't exist" 1>&2
+	exit 1
+fi
+
+if test -t 1
+then
+	INTERACTIVE=true
+else
+	INTERACTIVE=false
+fi
+
+shopt -s lastpipe
+
+if $INTERACTIVE
+then
+	echo "Usage: [yY]: Add these IPs  [bB]: Add and blacklist  "\
+		"[nN]: Don't add  [wW]: Don't add and whitelist  "\
+		"[?]: Show whois record  [qQ]: Quit now"
+	echo "[wW] and [bB] also accept a cut field specifier to select which hostnames to include"
+fi
+
+while read -r line
+do
+	ip=${line%% *}
+	# space separated
+	providers=${line:(${#ip}+1)}
+
+	PROV_REGEX="(^| )(${providers// /|})($| )"
+
+	if test -n "$providers" && grep -q -E "$PROV_REGEX" <<< "$WHITELIST"
+	then
+		continue
+	elif test -n "$providers" && grep -q -E "$PROV_REGEX" <<< "$BLACKLIST"
+	then
+		:
+	elif ! $INTERACTIVE
+	then
+		echo "$line"
+		continue
+	else
+		SKIP="false"
+		BREAK="false"
+
+		while :
+		do
+			read -p "Ban $ip ($providers) [Y/B/N/W/Q/?]? " ban < /dev/tty
+
+			case "$ban" in
+				[Yy]* ) ;;
+				[Bb]* ) if test -z "$providers"
+					then
+						echo "No providers found to blacklist" 1>&2
+					elif test ${#ban} -gt 1
+					then
+						BLACKLIST="$BLACKLIST $(cut -d' ' "-f${ban:1}" <<< "$providers")"
+					else
+						BLACKLIST="$BLACKLIST $providers"
+					fi
+				;;
+				[Nn]* ) SKIP="true" ;;
+				[Ww]* ) SKIP="true"
+					if test -z "$providers"
+					then
+						echo "No providers found to whitelist" 1>&2
+					elif test ${#ban} -gt 1
+					then
+						WHITELIST="$WHITELIST $(cut -d' ' "-f${ban:1}" <<< "$providers")"
+					else
+						WHITELIST="$WHITELIST $providers"
+					fi
+				;;
+				[?]* )  whois ${ip%%-*}; continue ;;
+				[Qq]* ) BREAK="true" ;;
+				* ) continue ;;
+			esac
+			break
+		done
+
+		if $BREAK
+		then
+			break
+		elif $SKIP
+		then
+			continue
+		fi
+	fi
+
+	if test -z "$SET"
+	then
+		echo ipset add _ $ip 1>&2
+	else
+		ipset add "$SET" $ip
+	fi
+done < "$FILE"
+
+if $INTERACTIVE
+then
+	echo -e "Final whitelist: $WHITELIST\nFinal blacklist: $BLACKLIST"
+fi
