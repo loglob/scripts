@@ -14,7 +14,7 @@
 	<icon>among-us</icon>
 	<name>Play Audio</name>
 	<unique-id>1664230981403872-1</unique-id>
-	<command>mpv --player-operation-mode=pseudo-gui --shuffle %F</command>
+	<command>mpv --player-operation-mode=pseudo-gui --loop-playlist --shuffle %F</command>
 	<description>Plays music in a GUI with mpv</description>
 	<patterns>*</patterns>
 	<directories/>
