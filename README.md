@@ -57,7 +57,7 @@ Scripts to build an ipset from fail2ban logs or other IPs.
 Example combined usage:
 ```sh
 	sudo ./fail2ban-ips | ./ips-whois > whois-data
-	sudo whois-ipset whois-data IPSetHere black,listed,domains white,listed,domains
+	sudo whois-ipset whois-data IPSetHere "black listed domains here" "white listed domains here"
 ```
 
 ### fail2ban-ips
@@ -73,6 +73,9 @@ Uses the identified providers for filtering the sets.
 
 ## sound-webm
 Adds the sound to a webm or image created for the [4chan external sound](https://sleazyfork.org/en/scripts/31045-4chan-external-sounds) userscript.
+
+## find-dupes
+Finds all duplicate files (by MD5) in the current directory tree.
 
 # Dotfiles
 A collection of my config files
