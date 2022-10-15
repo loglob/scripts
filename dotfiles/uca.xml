@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Open Terminal Here</name>
+	<unique-id>1663625995691941-1</unique-id>
+	<command>exo-open --working-directory %f --launch TerminalEmulator</command>
+	<description>Example for a custom action</description>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>among-us</icon>
+	<name>Play Audio</name>
+	<unique-id>1664230981403872-1</unique-id>
+	<command>mpv --player-operation-mode=pseudo-gui --shuffle %F</command>
+	<description>Plays music in a GUI with mpv</description>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+</action>
+<action>
+	<icon>visual-studio-code</icon>
+	<name>Open in VS code</name>
+	<unique-id>1642377507206823-1</unique-id>
+	<command>code %f</command>
+	<description>Opens a directory with Visual Studio Code</description>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon></icon>
+	<name>Convert to PNG</name>
+	<unique-id>1642439148620071-1</unique-id>
+	<command>convert %f &quot;$(basename %f .webp).png&quot;</command>
+	<description>Converts a webp to png</description>
+	<patterns>*.webp</patterns>
+	<image-files/>
+</action>
+<action>
+	<icon></icon>
+	<name>Convert to JPEG</name>
+	<unique-id>1642439218231807-2</unique-id>
+	<command>convert %f &quot;$(basename %f .webp).jpg&quot;</command>
+	<description>Converts a webp to jpeg</description>
+	<patterns>*.webp</patterns>
+	<image-files/>
+</action>
+<action>
+	<icon>system-run</icon>
+	<name>Execute Script</name>
+	<unique-id>1649138466904721-1</unique-id>
+	<command>bash %f</command>
+	<description>Executes a script</description>
+	<patterns>*.sh</patterns>
+	<other-files/>
+	<text-files/>
+</action>
+</actions>
