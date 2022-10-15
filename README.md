@@ -71,6 +71,9 @@ Then use abuse/email records to identify the providers of those subnets.
 Use the whois information from `ips-whois` to interactively build an IPset containing offending subnets.
 Uses the identified providers for filtering the sets.
 
+## sound-webm
+Adds the sound to a webm or image created for the [4chan external sound](https://sleazyfork.org/en/scripts/31045-4chan-external-sounds) userscript.
+
 # Dotfiles
 A collection of my config files
 
@@ -81,6 +84,8 @@ Custom actions for Thunar
 - Open VS code
 - Convert a .webp image to a .png or .jpg with image magick
 - run a script with bash
+- shortcut for the `sound-webm` script
 
 To install, move to `~/.config/Thunar/uca.xml`.
 Note that that file probably already exists & you probably want to merge the XML by hand.
+
