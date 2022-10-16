@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/env bash
 # ips-whois: Reads a list of IPs and identifies subnets via whois data.
 #  Also includes abuse/email records to identify providers
 #  outputs format:  [IP]-[IP] [provider hostnames...]

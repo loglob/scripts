@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env bash
 # xssh: Opens a ssh session with X and PulseAudio forwarding.
 
 # The port under which the local pulseaudio instance is listening

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/env bash
 # fail2ban-ips: exports all offending IPs from fail2ban
 
 grep -E --only-matching "Found [0-9]+(\.[0-9]+)+" "/var/log/fail2ban.log"* | cut -d' ' -f 2

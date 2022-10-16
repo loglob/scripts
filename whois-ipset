@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/env bash
 # fail2ban-ipset: Builds an IP set from annotated IP ranges.
 #  If a record is not filtered, asks the user for input, unless a redirection is active.
 #    If used with redirected output, outputs any unfiltered IP ranges to stdout

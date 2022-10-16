@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env bash
 # find-dupes: finds every duplicate file in the current directory, including all subdirectories.
 #   picks the oldest file from each equivilancy class to be the original and echoes all others
 #   output is NUL terminated
@@ -8,23 +8,22 @@ shopt -s lastpipe
 last_hash=""
 last_file=""
 
-find . -type f -print0 | xargs -0 md5sum -z | sort -z --field-separator=' ' --key=1 |\
-    while read -r -d $'\0' line
-    do
-        hash="${line:0:32}"
-        file="${line:34}"
+find . -type f -print0 | xargs -0 md5sum -z | sort -z --field-separator=' ' --key=1 | while read -r -d $'\0' line
+do
+    hash="${line:0:32}"
+    file="${line:34}"
 
-        if test "$hash" == "$last_hash"
+    if test "$hash" == "$last_hash"
+    then
+        if test `stat -c '%Y' "$file"` -ge `stat -c '%Y' "$last_file"`
         then
-            if test `stat -c '%Y' "$file"` -ge `stat -c '%Y' "$last_file"`
-            then
-                printf '%s%b' "$file" '\0'
-            else
-                printf '%s%b' "$last_file" '\0'
-                last_file="$file"
-            fi
+            printf '%s%b' "$file" '\0'
         else
-            last_hash="$hash"
+            printf '%s%b' "$last_file" '\0'
             last_file="$file"
         fi
-    done
+    else
+        last_hash="$hash"
+        last_file="$file"
+    fi
+done

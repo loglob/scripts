@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/env bash
 # vm-exec: Executes a predefined program on a virtualbox windows VM with a read-write file argument
 
 VM_NAME="VM NAME HERE"
