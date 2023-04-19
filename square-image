@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+for img in "$@"
+do
+	M=$(identify -format '%w %h' "$img" | awk '{ if($1 > $2) print $1; else print $2; }')
+
+	ext="${img##*.}"
+	fn="$(basename "$img" ".$ext")"
+	magick "$img" -gravity center -background transparent -extent "$M"x"$M" "$fn-square.$ext"
+done

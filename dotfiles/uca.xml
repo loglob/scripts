@@ -48,6 +48,15 @@
 	<image-files/>
 </action>
 <action>
+	<icon></icon>
+	<name>Square Image</name>
+	<unique-id>1681937217000000-1</unique-id>
+	<command>square-image %f</command>
+	<description>Make image square</description>
+	<patterns>*</patterns>
+	<image-files/>
+</action>
+<action>
 	<icon>system-run</icon>
 	<name>Execute Script</name>
 	<unique-id>1649138466904721-1</unique-id>
