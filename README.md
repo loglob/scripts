@@ -80,10 +80,9 @@ Finds all duplicate files (by MD5) in the current directory tree.
 # Dotfiles
 A collection of my config files
 
-## .xmodmap
-Custom key maps to type ʋ,Ʋ and ə for IPA.
-Run `xmodmap .xmodmap` to load.
-Add that to `~/.xinitrc` to enable at boot.
+## .Xmodmap
+Custom key maps to type ʋ,Ʋ, ə and ɾ for IPA.
+Move to `~` to enable on boot.
 
 ## uca.xml
 Custom actions for Thunar
