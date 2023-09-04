@@ -1,0 +1,4 @@
+! AltGr+W = ʋ, AltGr+Shift+W = Ʋ
+keycode 25 = w W w W U028B U01B2 U028B
+! AltGr+Shift+E = ə
+keycode 26 = e E e E EuroSign U0259
