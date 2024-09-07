@@ -108,6 +108,33 @@ Adds the sound to a webm or image created for the [4chan external sound](https:/
 ## find-dupes
 Finds all duplicate files (by MD5) in the current directory tree.
 
+## update-zones
+Keeps a geo-IP list up to date for IP filtering.
+
+### Setup
+Expects a `db` folder in the working directory.
+Inside, you add files named like ISO 3166-1 country codes with a `.zone` ending, i.e. `de.zone` or `fr.zone`.
+The script will replace each of these files with a complete list of all IPv4 subnets of the listed country in CIDR notation.  
+Any other file not ending in `.zone` is ignored. You can use these to store custom IP sets for `load-ipset`.
+
+## load-ipset
+Loads the IP lists prepared with `update-zones` into an ipset.
+Reads from the `db` folder in the working directory and takes the name of the resulting ipset as its first argument.
+The ipset must already exist and will be cleared of all entries not found in the `db` lists.
+
+Note that this script will need `sudo` permissions to modify ipsets.
+
+You'll need an iptables setup like
+```
+Chain INPUT (policy ACCEPT)
+target     prot opt source   destination         
+DROP       tcp  --  anywhere anywhere     state NEW ! match-set GERMANY src
+```
+to use the generated ipset for filtering. You can append it like this:
+```sh
+sudo iptables -A INPUT -p tcp -m state --state NEW -m set ! --match-set GERMANY src -j DROP
+```
+
 # Dotfiles
 A collection of my config files
 

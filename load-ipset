@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+ipset flush "$1"
+
+cat db/* | while read ip
+do
+	ipset add "$1" "$ip"
+done
+
+echo "Done loading $(sudo ipset list $1 | wc -l) entries"
