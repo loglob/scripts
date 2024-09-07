@@ -1,0 +1,9 @@
+#!/bin/env bash
+# reverse-channel: Establishes a reverse TCP proxy via SSH forwarding
+set -e
+
+FWD=`awk '{printf "-R %s:*:%s ",$0,$0}' ports.txt`
+PORT=22
+HOST=your.host.here
+
+ssh -p$PORT -v $FWD -T -N root@$HOST

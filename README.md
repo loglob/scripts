@@ -71,6 +71,37 @@ Then use abuse/email records to identify the providers of those subnets.
 Use the whois information from `ips-whois` to interactively build an IPset containing offending subnets.
 Uses the identified providers for filtering the sets.
 
+## reverse-channel
+Establishes a TCP reverse proxy via SSH forwarding on a remote host.
+You'd run network services on a local machine, then run that script to SSH into a remote machine which is reachable from the internet, which would then forward any incoming requests to your local machine.
+
+> Note that IP-based filtering on the local machine will be ineffective, you need to perform it on the remote machine.
+
+### Setup
+First, you need to configure SSH on both machines. 
+You need to set up key-based SSH access to **root** on the remote machine.
+Root access is required to forward privileged ports.  
+I recommend isolating the service with a new user so that you can apply a local SSH configuration.
+You need to make sure that your local ssh client is configured with the options
+```
+ExitOnForwardFailure yes
+ConnectTimeout 15
+ServerAliveInterval 15
+ServerAliveCountMax 1
+```
+which can be set in `~/.ssh/config` or `/etc/ssh/ssh_config` (*not* ssh**d**_config).  
+On the remote machine ensure the `/etc/ssh/sshd_config` has these options:
+```
+GatewayPorts yes
+ClientAliveInterval 15
+ClientAliveCountMax 1
+PermitRootLogin yes
+```
+
+Then edit the variables in the script and supply a `ports.txt` that lists every forwarded port, one per line.
+
+> Make sure to run the script once in a real terminal because configuring known_hosts will require user input
+
 ## sound-webm
 Adds the sound to a webm or image created for the [4chan external sound](https://sleazyfork.org/en/scripts/31045-4chan-external-sounds) userscript.
 
