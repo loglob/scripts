@@ -5,14 +5,12 @@ import requests
 sets={}
 
 for z in glob.glob("db/*.zone"):
-	k = z.split('/')[1].removesuffix(".zone")
+	k = z.split('/')[1][:-5]
 	sets[k] = []
 
-print("Loading DB...", end= "")
+print("Pulling DB...", end= "")
 raw = requests.get("https://raw.githubusercontent.com/sapics/ip-location-db/main/dbip-country/dbip-country-ipv4.csv").text
-print("OK")
 
-print("Parsing DB...", end= "")
 for ln in raw.split('\n'):
 	if(len(ln) == 0):
 		continue
