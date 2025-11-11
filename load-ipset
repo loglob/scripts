@@ -3,7 +3,14 @@ set -e
 
 ipset flush "$1"
 
-cat db/* | while read ip
+# If installed, aggregate will merge overlapping IP ranges, compressing the generated ipset
+PROCESS="aggregate"
+if ! which $PROCESS &>/dev/null
+then
+	PROCESS="cat -"
+fi
+
+cat db/* | $PROCESS | while read ip
 do
 	ipset add "$1" "$ip"
 done
