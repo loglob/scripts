@@ -1,0 +1,70 @@
+#!/usr/bin/bash
+
+if [ $# -lt 2 ] || [ $# -gt 3 ]
+then
+	echo "Usage: $0 <input file> [<subtitles>] <output file>"
+	echo "Re-encodes a video file as AV1, possibly adding subtitles."
+	echo "Reports failure if the output is larger than the input, and trashes the input file (with gio) otherwise."
+	exit 1
+fi
+
+INPUT="$1"
+SUB_CODEC="copy"
+
+if [ $# -eq 3 ]
+then
+	OUTPUT="$3"
+	SUBS="$2"
+else
+	OUTPUT="$2"
+fi
+
+if [ -e "$OUTPUT" ]
+then
+	echo "Output path mustn't exist"
+	exit 1
+fi
+
+if [[ "$OUTPUT" == *.mp4 ]] && [ -n "$SUBS" ]
+then
+	SUB_CODEC="mov_text"
+else
+	SUB_CODEC="copy"
+fi
+
+LOG_OPTIONS="-hide_banner -loglevel warning -stats"
+AV1_OPTIONS="-c:v libsvtav1 -crf 30 -preset 8 -svtav1-params keyint=10s:tune=0:enable-overlays=1:scd=1:scm=0"
+
+set -e
+# supress debug info
+export SVT_LOG=1
+
+echo "Re-encoding '$INPUT'..."
+
+if [ -n "$SUB_CHARENC" ]
+then
+	SUB_CHARENC="-sub_charenc $SUB_CHARENC"
+fi
+
+if [ -n "$SUBS" ]
+then
+	ffmpeg $LOG_OPTIONS -i "$INPUT" $SUB_CHARENC -i "$SUBS" -c:s $SUB_CODEC $AV1_OPTIONS "$OUTPUT"
+else
+	ffmpeg $LOG_OPTIONS -i "$INPUT" -map 0 -c:a copy -c:s $SUB_CODEC $AV1_OPTIONS "$OUTPUT"
+fi
+
+INPUT_SIZE_H=$(du -h "$INPUT" | cut -f1)
+INPUT_SIZE_B=$(du -b "$INPUT" | cut -f1)
+OUTPUT_SIZE_H=$(du -h "$OUTPUT" | cut -f1)
+OUTPUT_SIZE_B=$(du -b "$OUTPUT" | cut -f1)
+
+echo "$OUTPUT: $INPUT_SIZE_H -> $OUTPUT_SIZE_H ($((100 * $OUTPUT_SIZE_B / $INPUT_SIZE_B))%)"
+
+if [ $OUTPUT_SIZE_B -gt $INPUT_SIZE_B ]
+then
+	echo "Output file is bigger!"
+	exit 1
+fi
+
+gio trash "$INPUT"
+echo "(trashed input)"
