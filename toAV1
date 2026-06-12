@@ -63,6 +63,7 @@ echo "$OUTPUT: $INPUT_SIZE_H -> $OUTPUT_SIZE_H ($((100 * $OUTPUT_SIZE_B / $INPUT
 if [ $OUTPUT_SIZE_B -gt $INPUT_SIZE_B ]
 then
 	echo "Output file is bigger!"
+	gio trash "$OUTPUT" # delete instead?
 	exit 1
 fi
 
