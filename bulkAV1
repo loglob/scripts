@@ -1,0 +1,257 @@
+#!/usr/bin/python
+from subprocess import run
+from sys import stderr, stdout, argv
+from os.path import getsize
+import os
+from os import path
+from typing import Generator, Set, List, Tuple, Callable, NoReturn
+from dataclasses import dataclass
+
+# strip off program name
+program = argv.pop(0)
+
+def usage(preamble : str|None = None) -> NoReturn:
+	if preamble != None:
+		print(preamble, '\n', file=stderr)
+
+	print(f"""\
+Usage: {program} [flag|file...]
+Wrapper around toAV1 to re-encode videos in-place or in bulk.
+
+Flags:
+  -h  Shows this help page.
+  -d  Performs a dry run where files aren't actually modified. 
+  -r  Subsequent files may be directories, which are descended recursively (without following links).
+  -s  Gives a subtitle file to apply to all following file. 
+      This may also be a directory that is searched for subtitle files with equivalent filenames.
+  -e  Registers a file extension to be accepted as video input. Extensions may be specified with or without leading dot.
+      File of this type will be transcoded into a MKV container.
+  -E  Same as -e, but re-encodes to the same container format, which must be AV1-capable.
+  -x  Registers a file extension to be accepted as subtitle input.
+      When multiple options are available, the last specified extension is preferred.""", file=stderr)
+
+	exit(0 if preamble is None else 1)
+
+# valid input video file extensions (prefers later values)
+inExt : List[str] = [ '.mp4', '.mkv', '.webm', '.avi' ]
+# valid output video file extensions
+outExt : Set[str] = { '.mp4', '.mkv', '.webm' }
+# extension to use if the input extension isn't a valid output extension
+defaultExt = '.mkv'
+# valid extensions for subtitle files (prefers later values)
+subExt : List[str] = [ '.srt', '.ass', '.idx' ]
+recursive = False
+dry = False
+
+# subtitle file to use
+subsFile : str|None = None
+# directory to retrieve subtitles from
+subsDir : str|None = None
+
+# temp used to store value of parsed CLI argument
+arg_value : str = ''
+
+def xprint(msg : str) -> NoReturn:
+	print(msg, file=stderr)
+	exit(1)
+
+def flag(f : str, value : bool = False) -> bool:
+	global arg_value # used to return the value
+	assert len(f) == 1
+
+	if len(argv) == 0:
+		return False
+
+	head = argv[0]
+
+	# assignment form, i.e. '-f=...'
+	if len(head) >= 3 and head[0] == '-' and head[1] == f and head[2] == '=':
+		if not value:
+			usage(f"Flag '-{f}' doesn't accept an argument")
+		
+		arg_value = head[3:]
+		argv.pop(0)
+
+		return True
+
+	# normal form, i.e. '-f' ('...')
+	if len(head) == 2 and head[0] == '-' and head[1] == f:
+		argv.pop(0)
+
+		if value:
+			if len(argv) == 0:
+				usage(f"Expected a value for '-{f}'")
+
+			arg_value = argv.pop(0)
+
+		return True
+
+	return False
+
+def positional() -> bool:
+	global arg_value # used to return the value
+
+	if len(argv) == 0:
+		return False
+
+	arg_value = argv.pop(0)
+
+	if arg_value.startswith('-'):
+		usage(f"Invalid flag '{arg_value}'" + (" (flags may not be packed)" if len(arg_value) > 2 else ""))
+
+	return True
+
+def makeExt(ext : str) -> str:
+	return ext if ext.startswith('.') else '.' + ext
+
+# Determines if a path has a valid video extension
+def videoExt(file : str) -> Tuple[str, str] | Tuple[None, None]:
+	# reverse so that the user can specify e.g. '.foo.mp4' and it is matched
+	for ext in reversed(inExt):
+		if file.endswith(ext):
+			return (ext, ext if ext in outExt else defaultExt)
+	
+	return (None, None)
+
+# Finds subtitles based on an input file path, and its relative path during directory traversal (if any)
+def findSubs(file : str, ext : str, baseDir : str|None) -> str|None:
+	if subsFile != None:
+		return subsFile
+	if subsDir == None:
+		return None
+	
+	file_no_ext = file.removesuffix(ext)
+	fn = path.basename(file_no_ext)
+	rfn = path.relpath(file_no_ext, baseDir) if baseDir != None else None
+
+	for e in subExt:
+		byName = path.join(subsDir, fn + e)
+
+		if path.isfile(byName):
+			return byName
+
+		if rfn != None:
+			byRel = path.join(subsDir, rfn + e)
+
+			if path.isfile(byRel):
+				return byRel
+
+	xprint(f"Could not locate subtitles for '{file}' in '{subsDir}'")
+
+class Job:
+	""" A single re-encoding to apply """
+	inputFile: str
+	subFile : str|None
+	tempFile : str|None
+	outputFile : str
+
+	def __init__(self : Job, file : str, subs : str|None, in_ext : str, out_ext : str):
+		self.inputFile = file
+		self.subFile = subs
+		no_ext = file.removesuffix(in_ext)
+		
+		if in_ext == out_ext:
+			self.tempFile = no_ext + '-AV1' + out_ext
+			self.outputFile = self.inputFile
+		else:
+			self.tempFile = None
+			self.outputFile = no_ext + out_ext
+
+	""" Prints the job's details without executing it """
+	def print_dry(self : Job):
+		print("toAV1 '", self.inputFile, "' ", end='', sep='')
+		
+		if self.subFile != None:
+			print("'", self.subFile, "' ", end='', sep='')
+		
+		print("'", self.tempFile or self.outputFile, "'", end='', sep='')
+		
+		if self.tempFile != None:
+			print(" && mv '", self.tempFile, "' '", self.outputFile, "'", sep='')
+		else:
+			print()
+
+# collect all files to be processed before actually converting, so that no partial work is done
+#   entries are (input path, input ext, subs file, output ext)
+todo : List[Job] = []
+
+if len(argv) == 0:
+	usage()
+
+while True:
+	if flag('h') or flag('H'):
+		usage()
+	elif flag('d'):
+		dry = True
+	elif flag('r'):
+		recursive = True
+	elif flag('s', value=True):
+		if path.isdir(arg_value):
+			subsDir = arg_value
+			subsFile = None
+		elif path.isfile(arg_value):
+			if not any(arg_value.endswith(ext) for ext in subExt):
+				xprint(f"Not a subtitle file: '{arg_value}'")
+
+			subsDir = None
+			subsFile = arg_value
+		else:
+			xprint(f"Could not open file: '{arg_value}'")
+	elif flag('e', value=True):
+		inExt.append(makeExt(arg_value))
+	elif flag('E', value=True):
+		e = makeExt(arg_value)
+		inExt.append(e)
+		outExt.add(e)
+	elif flag('x', value=True):
+		subExt.append(makeExt(arg_value))
+	elif positional():		
+		if os.path.isdir(arg_value):
+			if not recursive:
+				xprint(f"Expected a regular file: '{arg_value}' (specify -r to process directories)")
+
+			for d,_,files in os.walk(arg_value, followlinks=False):
+				for file in files:
+					i,o = videoExt(file)
+
+					if i == None:
+						continue
+					
+					full = path.join(d, file)
+					todo.append(Job(full, findSubs(full, i, arg_value), i, o))
+		elif os.path.isfile(arg_value):
+			i,o = videoExt(arg_value)
+
+			if i == None:
+				xprint(f"Not a video file: '{arg_value}'")
+			
+			s = findSubs(arg_value, i, None)
+			todo.append(Job(arg_value, s, i, o))
+		else:
+			xprint(f"Could not open file: '{arg_value}'")
+	else:
+		break
+
+# check for clobber
+for job in todo:
+	if job.tempFile != None and path.exists(job.tempFile):
+		xprint(f"Temporary output file already exists: '{job.tempFile}', was a previous execution aborted?")
+	if job.inputFile != job.outputFile and path.exists(job.outputFile):
+		xprint(f"Output file already exists: '{job.outputFile}'")
+
+for job in todo:
+	if dry:
+		job.print_dry()
+	else:
+		o = job.tempFile or job.outputFile
+		cmd = [ "toAV1", job.inputFile, job.subFile, o ]
+		cmd.remove(None)
+		# this trashes the input on success
+		ex = run(cmd)
+
+		if ex.returncode != 0:
+			continue # output file was bigger (and removed)
+
+		if job.tempFile != None:
+			# when operating in-place, the input gets trashed by toAV1
+			os.rename(job.tempFile, job.outputFile)
