@@ -50,6 +50,8 @@ subsDir : str|None = None
 
 # temp used to store value of parsed CLI argument
 arg_value : str = ''
+# stored the last seen flag, or None if a positional was seen
+dangling_option : str|None = None
 
 def xprint(msg : str) -> NoReturn:
 	print(msg, file=stderr)
@@ -57,6 +59,7 @@ def xprint(msg : str) -> NoReturn:
 
 def flag(f : str, value : bool = False) -> bool:
 	global arg_value # used to return the value
+	global dangling_option
 	assert len(f) == 1
 
 	if len(argv) == 0:
@@ -69,6 +72,7 @@ def flag(f : str, value : bool = False) -> bool:
 		if not value:
 			usage(f"Flag '-{f}' doesn't accept an argument")
 		
+		dangling_option = head[0:3]
 		arg_value = head[3:]
 		argv.pop(0)
 
@@ -76,6 +80,7 @@ def flag(f : str, value : bool = False) -> bool:
 
 	# normal form, i.e. '-f' ('...')
 	if len(head) == 2 and head[0] == '-' and head[1] == f:
+		dangling_option = head
 		argv.pop(0)
 
 		if value:
@@ -90,10 +95,12 @@ def flag(f : str, value : bool = False) -> bool:
 
 def positional() -> bool:
 	global arg_value # used to return the value
+	global dangling_option
 
 	if len(argv) == 0:
 		return False
 
+	dangling_option = None
 	arg_value = argv.pop(0)
 
 	if arg_value.startswith('-'):
@@ -232,6 +239,9 @@ while True:
 	else:
 		break
 
+if dangling_option != None:
+	usage(f"Expected input file after trailing flag '{dangling_option}'")
+
 # check for clobber
 for job in todo:
 	if job.tempFile != None and path.exists(job.tempFile):
@@ -244,10 +254,8 @@ for job in todo:
 		job.print_dry()
 	else:
 		o = job.tempFile or job.outputFile
-		cmd = [ "toAV1", job.inputFile, job.subFile, o ]
-		cmd.remove(None)
 		# this trashes the input on success
-		ex = run(cmd)
+		ex = run([x for x in [ "toAV1", job.inputFile, job.subFile, o ] if x != None ])
 
 		if ex.returncode != 0:
 			continue # output file was bigger (and removed)
