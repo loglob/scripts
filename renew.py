@@ -9,14 +9,14 @@ import subprocess
 # dir in which keys live
 KEY_DIR="/srv/acme"
 # dir in which certificates live
-CERT_DIR="/var/tls"
+CERT_DIR="/var/ssl"
 # dir in which we host challenge files
 ACME_DIR="/var/www/acme-challenge"
 # dir in which alias configurations live
 ALIAS_DIR=KEY_DIR
 # set to true to only print required commands (May not be shell-safe due to subpar escaping)
-DRY=True
-# minimum amount of seconds a cert has to old to refresh (always refreshed if key or aliases changed)
+DRY=False
+# minimum age of a cert (in seconds) to refresh (key or alias change always forces refresh)
 MIN_AGE=60*60*24*3
 
 account_key = Path(KEY_DIR).joinpath("account.key")
@@ -53,9 +53,9 @@ for key_file in Path(KEY_DIR).glob("*.key"):
 	real_cert = Path(CERT_DIR).joinpath(f"{domain}.crt")
 
 	def age(f : Path) -> float:
-		return f.stat().st_mtime if f.is_file() else -inf 
+		return f.stat().st_mtime if f.is_file() else float("inf")
 	
-	cert_age = age(real_cert) - max(age(key_file), age(alias_file))
+	cert_age = age(real_cert) - max(key_file.stat().st_mtime, age(alias_file))
 
 	if cert_age < MIN_AGE:
 		print(f"{"# " if DRY else ""}{str(real_cert)} is up to date ({round(cert_age / 60, 1)}min old)")
