@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
 import subprocess
 
 # dir in which keys live
@@ -40,10 +40,10 @@ def fmt_cmd(cmd : list[str], redirect : Path|None = None) -> str:
 
 for key_file in Path(KEY_DIR).glob("*.key"):
 	domain = key_file.name.removesuffix(".key")
-	
+
 	if domain == "account":
 		continue
-	
+
 	alias_file = Path(ALIAS_DIR).joinpath(f"{domain}.alias")
 	all_domains = [domain] + (alias_file.read_text().split() if alias_file.is_file() else [])
 
@@ -53,13 +53,12 @@ for key_file in Path(KEY_DIR).glob("*.key"):
 	real_cert = Path(CERT_DIR).joinpath(f"{domain}.crt")
 
 	def age(f : Path) -> float:
-		return f.stat().st_mtime if f.is_file() else float("inf")
-	
-	cert_age = age(real_cert) - max(key_file.stat().st_mtime, age(alias_file))
+		return (datetime.now().timestamp() - f.stat().st_mtime) if f.is_file() else float("inf")
 
-	if cert_age < MIN_AGE:
+	cert_age = age(real_cert)
+
+	if cert_age < min(MIN_AGE, age(key_file), age(alias_file)):
 		print(f"{"# " if DRY else ""}{str(real_cert)} is up to date ({round(cert_age / 60, 1)}min old)")
-
 		continue
 
 
@@ -105,7 +104,7 @@ for key_file in Path(KEY_DIR).glob("*.key"):
 
 		tmp_cert.chmod(0o440) # make readonly
 		tmp_cert.move(real_cert)
-	
+
 	any_succeed = True
 
 if any_succeed:
