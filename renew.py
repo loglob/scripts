@@ -9,13 +9,13 @@ import subprocess
 import shlex
 import re
 
-# dir in which keys live
+# dir in which keys live (RSA keys named {domain}.key along with one {account}.key)
 KEY_DIR="/srv/acme"
-# dir in which certificates live
+# dir in which certificates live (also used for temporary CSR files)
 CERT_DIR="/var/ssl"
 # dir in which we host challenge files
 ACME_DIR="/var/www/acme-challenge"
-# dir in which alias configurations live
+# dir in which alias configurations live (plain text files that list out every alias domain. Domain names (including the key name) must not be repeated)
 ALIAS_DIR=KEY_DIR
 # set to true to only print required commands
 DRY=False
